@@ -6,8 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "rimraf dist && nest build --webpack webpack.dev.config.js",
-    "build:no:webpack": "nest build --webpack",
+    "build": "nest build",
+    "build:prod": "rimraf dist && nest build --webpack webpack.dev.config.js",
+    "build:dev": "rimraf dist && nest build --watch --webpack webpack.dev.config.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
