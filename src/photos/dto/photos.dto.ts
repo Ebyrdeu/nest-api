@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsUrl } from 'class-validator';
 
 export class PhotosDto {
   @IsString()
@@ -19,5 +19,5 @@ export class PhotosDto {
   @ApiProperty({
     example: 'Confetti',
   })
-  commnet: string;
+  comment: string;
 }

@@ -1,10 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { GetCurrentUserId } from '@auth/common/decorators';
 import { AlbumsService } from '@album/albums.service';
 import { AlbumDto, AlbumPhotoDto } from '@album/dto';
+import { GetCurrentUser } from '@auth/common/decorators';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
-@ApiTags('albums')
+@ApiTags('Albums')
 @ApiBearerAuth('jwt-access')
 @Controller('albums')
 export class AlbumsController {
@@ -14,26 +21,25 @@ export class AlbumsController {
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.OK,
         data: {
-          status: 'success',
+          status: HttpStatus.OK,
           data: [
             {
               id: 17,
-              title: 'Confetti Album',
-              user_id: 4,
+              title: 'Confetti Album user_id: 4 ',
             },
             {
               id: 18,
-              title: 'Happy Album',
-              user_id: 4,
+              title: 'Happy Album user_id: 4',
             },
           ],
         },
       },
     },
   })
-  getAllAlbums(@GetCurrentUserId() userId: string) {
+  @ApiOperation({ summary: 'Get ALL current logged user albums' })
+  getAllAlbums(@GetCurrentUser('id') userId: string) {
     return this.albumService.getAllAlbums(userId);
   }
 
@@ -41,7 +47,7 @@ export class AlbumsController {
   @ApiParam({
     name: 'id',
     required: true,
-    type: Number,
+    type: 'integer',
     description: 'Stored as integer',
     schema: { example: 1 },
   })
@@ -82,27 +88,26 @@ export class AlbumsController {
       },
     },
   })
-  getAlbumById(@Param() { id }: { id: string }) {
-    return this.albumService.getAlbumById(id);
+  @ApiOperation({ summary: 'Get Single current logged user album by id' })
+  getAlbumById(@GetCurrentUser('id') userId: string, @Param() { id }: { id: string }) {
+    return this.albumService.getAlbumById(userId, id);
   }
 
   @Post()
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.CREATED,
         data: {
-          status: 'success',
-          data: {
-            title: 'Confetti Album',
-            user_id: 4,
-            id: 17,
-          },
+          title: 'Confetti Album',
+          user_id: 4,
+          id: 17,
         },
       },
     },
   })
-  createNewAlbum(@GetCurrentUserId() userId: string, @Body() dto: AlbumDto) {
+  @ApiOperation({ summary: 'Create Single current logged user album' })
+  createNewAlbum(@GetCurrentUser('id') userId: string, @Body() dto: AlbumDto) {
     return this.albumService.createNewAlbum(userId, dto);
   }
 
@@ -117,20 +122,18 @@ export class AlbumsController {
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.CREATED,
         data: {
-          status: 'success',
-          data: {
-            title: "Confetti'R'Us",
-            user_id: 4,
-            id: 17,
-          },
+          title: "Confetti'R'Us",
+          user_id: 4,
+          id: 17,
         },
       },
     },
   })
+  @ApiOperation({ summary: 'Update Single current logged user album by id' })
   updateAlbum(
-    @GetCurrentUserId() userId: string,
+    @GetCurrentUser('id') userId: string,
     @Body() dto: AlbumDto,
     @Param() { id }: { id: string },
   ) {
@@ -156,11 +159,12 @@ export class AlbumsController {
       },
     },
   })
-  deleteAlbum(@GetCurrentUserId() userId: string, @Param() { id }: { id: string }) {
+  @ApiOperation({ summary: 'Delete Single current logged user album by id' })
+  deleteAlbum(@GetCurrentUser('id') userId: string, @Param() { id }: { id: string }) {
     return this.albumService.deleteAlbum(userId, id);
   }
 
-  @Patch(':albumId/photos/')
+  @Post(':albumId/photos/')
   @ApiParam({
     name: 'albumId',
     required: true,
@@ -175,8 +179,19 @@ export class AlbumsController {
       },
     },
   })
+  @ApiNotFoundResponse({
+    schema: {
+      example: {
+        statusCode: HttpStatus.NOT_FOUND,
+        message:
+          'You do have any album with id 1, make sure to that you chose photos that you actually have on your' +
+          ' account ',
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Create Multi photos in a single album for current logged user' })
   addPhotoToAlbum(
-    @GetCurrentUserId() userId: string,
+    @GetCurrentUser('id') userId: string,
     @Param() { albumId }: { albumId: string },
     @Body() dto: AlbumPhotoDto,
   ) {
@@ -209,8 +224,9 @@ export class AlbumsController {
       },
     },
   })
+  @ApiOperation({ summary: 'Delete Delete single in a single album for current logged user' })
   deletePhotoFromAlbum(
-    @GetCurrentUserId() userId: string,
+    @GetCurrentUser('id') userId: string,
     @Param() { albumId, photoId }: Record<any, string>,
   ) {
     return this.albumService.deletePhotoFromAlbum(userId, albumId, photoId);

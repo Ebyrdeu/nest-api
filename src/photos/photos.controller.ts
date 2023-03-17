@@ -1,10 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { PhotosService } from '@photo/photos.service';
-import { GetCurrentUserId } from '@auth/common/decorators';
+import { GetCurrentUser } from '@auth/common/decorators';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PhotosDto } from '@photo/dto';
+import { PhotosService } from '@photo/photos.service';
 
-@ApiTags('photos')
+@ApiTags('Photos')
 @ApiBearerAuth('jwt-access')
 @Controller('photos')
 export class PhotosController {
@@ -14,12 +21,12 @@ export class PhotosController {
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.OK,
         data: [
           {
             id: 42,
             title: 'Confetti Photo #1',
-            url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30',
+            url: 'h"https://images.unsplash.com/photo-1492684223066-81342ee5ff30"            ',
             comment: 'Confetti',
           },
           {
@@ -44,7 +51,8 @@ export class PhotosController {
       },
     },
   })
-  getAllPhotos(@GetCurrentUserId() userId: string) {
+  @ApiOperation({ summary: 'Get ALL current logged user photos' })
+  getAllPhotos(@GetCurrentUser('id') userId: string) {
     return this.photosService.getAllPhotos(userId);
   }
 
@@ -52,14 +60,14 @@ export class PhotosController {
   @ApiParam({
     name: 'id',
     required: true,
-    type: Number,
+    type: 'integer',
     description: 'Stored as integer',
     schema: { example: 1 },
   })
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.OK,
         data: {
           id: 42,
           title: 'Confetti Photo #1',
@@ -69,15 +77,16 @@ export class PhotosController {
       },
     },
   })
-  getSinglePhotoById(@Param() { id }: { id: string }) {
-    return this.photosService.getPhotoById(id);
+  @ApiOperation({ summary: 'Get Single current logged user photo by id' })
+  getSinglePhotoById(@GetCurrentUser('id') userId, @Param() { id }: { id: string }) {
+    return this.photosService.getPhotoById(userId, id);
   }
 
   @Post('/')
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.CREATED,
         data: {
           title: 'Confetti Photo #1',
           url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30',
@@ -88,8 +97,9 @@ export class PhotosController {
       },
     },
   })
-  createNewPhoto(@GetCurrentUserId() userId: string, @Body() photoDto: PhotosDto) {
-    return this.photosService.createBewPhoto(userId, photoDto);
+  @ApiOperation({ summary: 'Create Photo for current logged user' })
+  createNewPhoto(@GetCurrentUser('id') userId: string, @Body() photoDto: PhotosDto) {
+    return this.photosService.createNewPhoto(userId, photoDto);
   }
 
   @Delete(':id')
@@ -103,12 +113,23 @@ export class PhotosController {
   @ApiResponse({
     schema: {
       example: {
-        status: 'success',
+        status: HttpStatus.OK,
         data: null,
       },
     },
   })
-  deletePhoto(@GetCurrentUserId() userId: string, @Param() { id }: { id: string }) {
+  @ApiNotFoundResponse({
+    schema: {
+      example: {
+        statusCode: HttpStatus.NOT_FOUND,
+        message:
+          'You do have any photo with id 1, make sure to that you chose photos that you actually have on your' +
+          ' account ',
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Remove Single current logged user photo by id' })
+  deletePhoto(@GetCurrentUser('id') userId: string, @Param() { id }: { id: string }) {
     return this.photosService.deletePhoto(userId, id);
   }
 }

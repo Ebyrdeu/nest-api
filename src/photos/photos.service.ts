@@ -1,6 +1,7 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
 import { DbService } from '@db/db.service';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PhotosDto } from '@photo/dto';
+import { NotFoundPhotoException } from '@photo/exceptions';
 import { Photo } from '@prisma/client';
 
 @Injectable()
@@ -16,7 +17,7 @@ export class PhotosService {
         id: true,
         title: true,
         url: true,
-        commnet: true,
+        comment: true,
       },
     });
 
@@ -26,18 +27,25 @@ export class PhotosService {
     };
   }
 
-  async getPhotoById(photoId: string) {
-    const photo: Omit<Photo, 'userId'> = await this.db.photo.findUnique({
+  async getPhotoById(userId: string, photoId: string) {
+    const photo = await this.db.user.findUnique({
       where: {
-        id: +photoId,
+        id: userId,
       },
       select: {
-        id: true,
-        title: true,
-        url: true,
-        commnet: true,
+        photos: {
+          where: {
+            id: +photoId,
+          },
+        },
       },
     });
+
+    if (!photo)
+      return {
+        status: HttpStatus.NOT_FOUND,
+        data: null,
+      };
 
     return {
       status: HttpStatus.OK,
@@ -45,7 +53,7 @@ export class PhotosService {
     };
   }
 
-  async createBewPhoto(userId: string, dto: PhotosDto) {
+  async createNewPhoto(userId: string, dto: PhotosDto) {
     const newPhoto = await this.db.photo.create({
       data: {
         ...dto,
@@ -67,12 +75,9 @@ export class PhotosService {
       },
     });
 
-    if (deletedPhoto.count === 0)
-      return {
-        status: HttpStatus.NOT_FOUND,
-        message: `Photo with id ${photoId} doesn't exist in Database`,
-        data: null,
-      };
+    if (deletedPhoto.count === 0) {
+      throw new NotFoundPhotoException(photoId);
+    }
 
     return {
       status: HttpStatus.OK,

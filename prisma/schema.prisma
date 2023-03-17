@@ -28,9 +28,9 @@ model Album {
   id    Int    @id @default(autoincrement())
   title String
 
-  photos Photo[]
+  photos AlbumToPhoto[]
 
-  User   User?   @relation(fields: [userId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id])
   userId String?
 
   @@map("albums")
@@ -40,12 +40,27 @@ model Photo {
   id      Int    @id @default(autoincrement())
   title   String
   url     String
-  commnet String
+  comment String
 
-  album Album[]
+  albums AlbumToPhoto[]
 
-  User   User?   @relation(fields: [userId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id])
   userId String?
 
   @@map("photos")
+}
+
+model AlbumToPhoto {
+  photo   Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  photoId Int
+  album   Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  albumId Int
+
+  assignedUser String
+
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@id([photoId, albumId])
+  @@map("albumToPhoto")
 }

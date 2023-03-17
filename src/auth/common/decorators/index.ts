@@ -1,2 +1,2 @@
-export * from './get-current-user-id.decorator';
+export * from './getCurrentUser.decorator';
 export * from './public.decorator';

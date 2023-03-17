@@ -1,13 +1,19 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from '@auth/auth.service';
-import { AuthDto } from '@auth/dto';
-import { Tokens } from '@auth/types';
-import { Request } from 'express';
-import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { GetCurrentUser, Public } from '@auth/common/decorators';
 import { RtGuard } from '@auth/common/guards';
-import { GetCurrentUserId, Public } from '@auth/common/decorators';
+import { AuthDto } from '@auth/dto';
+import { type Tokens } from '@auth/types';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { type Request } from 'express';
 
-@ApiTags('auth')
+@ApiTags('User Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -23,6 +29,7 @@ export class AuthController {
       },
     },
   })
+  @ApiOperation({ summary: 'Create New User' })
   signUp(@Body() dto: AuthDto): Promise<Tokens> {
     return this.authService.signUp(dto);
   }
@@ -38,6 +45,7 @@ export class AuthController {
       },
     },
   })
+  @ApiOperation({ summary: 'Login as existing user' })
   signIn(@Body() dto: AuthDto): Promise<Tokens> {
     return this.authService.signIn(dto);
   }
@@ -46,14 +54,25 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('jwt-access')
   @ApiResponse({
-    description: 'If count shows 0 its means you already logout',
     schema: {
       example: {
-        count: 1,
+        status: 'success',
+        message: 'You have been logged out',
       },
     },
   })
-  logout(@GetCurrentUserId() userId: string) {
+  @ApiUnauthorizedResponse({
+    description:
+      'If you see error 401 it means either i have already logged out or you have not be logged',
+    schema: {
+      example: {
+        statusCode: 'error',
+        message: 'Unauthorized',
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Logout current logged user' })
+  logout(@GetCurrentUser('id') userId: string) {
     return this.authService.logout(userId);
   }
 
@@ -70,8 +89,9 @@ export class AuthController {
       },
     },
   })
+  @ApiOperation({ summary: 'RT current logged user' })
   refreshToken(@Req() req: Request) {
     const user = req.user;
-    return this.authService.refreshToken(user['sub'], user['refreshToken']);
+    return this.authService.refreshToken(user['id'], user['refreshToken']);
   }
 }

@@ -1,14 +1,19 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { DbService } from '@db/db.service';
 import { AuthDto } from '@auth/dto';
-import { compare, hash } from 'bcrypt';
-import { Tokens } from '@auth/types';
+import { type Tokens } from '@auth/types';
+import { DbService } from '@db/db.service';
+import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { type User } from '@prisma/client';
+import { compare, hash } from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private db: DbService, private jwtService: JwtService) {}
+  constructor(
+    private config: ConfigService,
+    private db: DbService,
+    private jwtService: JwtService,
+  ) {}
 
   async signUp({ email, password }: AuthDto): Promise<Tokens> {
     const hashedPassword = await this.hashPassword(password);
@@ -38,8 +43,8 @@ export class AuthService {
     return this.returnTokens(user);
   }
 
-  logout(userId: string) {
-    return this.db.user.updateMany({
+  async logout(userId: string) {
+    const user = await this.db.user.updateMany({
       where: {
         id: userId,
         refreshToken: {
@@ -50,6 +55,13 @@ export class AuthService {
         refreshToken: null,
       },
     });
+
+    if (user.count === 0) throw new ForbiddenException('access denied');
+
+    return {
+      status: HttpStatus.OK,
+      message: 'You have been logged out',
+    };
   }
 
   async refreshToken(userId: string, rt: string) {
@@ -79,7 +91,6 @@ export class AuthService {
     // Update the user's refresh token in the database
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
-    // Return the access token and refresh token
     return tokens;
   }
 
@@ -87,22 +98,23 @@ export class AuthService {
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
         {
-          sub: userId,
+          id: userId,
           email,
         },
         {
-          secret: 'at-secret',
-          expiresIn: 60 * 60 * 24 * 1000,
+          secret: this.config.get('AT_SECRET'),
+          expiresIn: '1h',
         },
       ),
       this.jwtService.signAsync(
         {
-          sub: userId,
+          id: userId,
           email,
         },
         {
-          secret: 'rt-secret',
-          expiresIn: 60 * 60 * 24 * 30,
+          secret: this.config.get('RT_SECRET'),
+
+          expiresIn: '7d',
         },
       ),
     ]);
